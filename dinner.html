@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晚餐吃什麼？</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fdf6e3;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 { color: #e67e22; }
+        
+        /* 輸入區樣式 */
+        .input-section { margin-bottom: 20px; }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #e67e22;
+            border-radius: 5px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #d35400; }
+        
+        /* 清單樣式 (新增刪除按鈕的設計) */
+        #foodList {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #foodList li {
+            background: #ffeaa7;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .delete-btn {
+            margin-left: 8px;
+            color: #e74c3c;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .delete-btn:hover { color: #c0392b; }
+
+        /* 轉盤區樣式 */
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 20px;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1); 
+        }
+        .pointer {
+            position: absolute;
+            top: 50%;
+            right: -20px; 
+            transform: translateY(-50%);
+            font-size: 30px;
+            color: #d35400;
+            z-index: 10;
+        }
+
+        #resultText {
+            font-size: 24px;
+            color: #c0392b;
+            min-height: 35px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🍽️ 晚餐吃什麼？</h1>
+    
+    <div class="input-section">
+        <input type="text" id="foodInput" placeholder="輸入餐點，例如：排骨飯">
+        <button onclick="addOption()">加入清單</button>
+    </div>
+
+    <ul id="foodList"></ul>
+
+    <div class="wheel-container">
+        <canvas id="wheelCanvas" width="300" height="300"></canvas>
+        <div class="pointer">◄</div>
+    </div>
+
+    <button id="spinBtn" onclick="spinWheel()" style="font-size: 20px; padding: 15px 30px;">開始抽籤！</button>
+    
+    <h2 id="resultText"></h2>
+
+    <script>
+        let options = ['牛肉麵', '水餃', '麥當勞', '炒飯', '火鍋', '吃土'];
+        let colors = ['#f1c40f', '#e67e22', '#e74c3c', '#9b59b6', '#3498db', '#1abc9c'];
+        
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        let currentDeg = 0; 
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const sliceDeg = 360 / options.length;
+
+            for (let i = 0; i < options.length; i++) {
+                const startAngle = (i * sliceDeg) * Math.PI / 180;
+                const endAngle = ((i + 1) * sliceDeg) * Math.PI / 180;
+
+                ctx.beginPath();
+                ctx.moveTo(150, 150); 
+                ctx.arc(150, 150, 150, startAngle, endAngle);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(150, 150);
+                ctx.rotate(startAngle + (sliceDeg / 2) * Math.PI / 180);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 18px sans-serif";
+                ctx.fillText(options[i], 130, 6);
+                ctx.restore();
+            }
+        }
+
+        // 修改：更新清單時，加上「刪除按鈕」
+        function updateList() {
+            const listObj = document.getElementById('foodList');
+            listObj.innerHTML = '';
+            options.forEach((opt, index) => {
+                const li = document.createElement('li');
+                // 在每個選項文字後面加上一個帶有 onclick 事件的 ✖ 符號
+                li.innerHTML = `${opt} <span class="delete-btn" onclick="removeOption(${index})">✖</span>`;
+                listObj.appendChild(li);
+            });
+        }
+
+        function addOption() {
+            const input = document.getElementById('foodInput');
+            const newFood = input.value.trim();
+            if (newFood !== '') {
+                options.push(newFood);
+                input.value = ''; 
+                updateList();
+                drawWheel(); 
+            }
+        }
+
+        // 新增：刪除選項的函數
+        function removeOption(index) {
+            if (options.length <= 2) {
+                alert("至少要留兩個選項才能轉啦！");
+                return;
+            }
+            // 利用 splice 把該位置的選項從陣列中拔除
+            options.splice(index, 1);
+            // 重新更新畫面
+            updateList();
+            drawWheel();
+        }
+
+        function spinWheel() {
+            if (options.length === 0) return alert("請先輸入餐點！");
+
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true; 
+            document.getElementById('resultText').innerText = "命運旋轉中...";
+
+            const randomDeg = Math.floor(Math.random() * 360);
+            currentDeg += 1800 + randomDeg; 
+            
+            canvas.style.transform = `rotate(${currentDeg}deg)`;
+        }
+
+        canvas.addEventListener('transitionend', () => {
+            const actualDeg = currentDeg % 360;
+            const sliceDeg = 360 / options.length;
+            const winningIndex = Math.floor((360 - actualDeg) / sliceDeg) % options.length;
+            
+            document.getElementById('resultText').innerText = `🎉 今晚吃：${options[winningIndex]}！`;
+            document.getElementById('spinBtn').disabled = false; 
+        });
+
+        updateList();
+        drawWheel();
+    </script>
+</body>
+</html>
